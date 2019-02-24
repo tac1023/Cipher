@@ -1,9 +1,14 @@
 import scala.annotation.tailrec
 
+/**
+  * Provides methods to encrypt or decrypt a string or file.
+  * Based on the Vigenere cipher, uses two keys to encrypt the
+  * input twice and then shuffles the string or file
+  *
+  * This class has only immutable state variables and thus is
+  * thread safe.
+  */
 class Cipher {
-  val asciiArray: Array[Char] = Array(65)
-
-  def getArray: Array[Char] = asciiArray
   val defaultKey2 = "]09agvn cv8eA ino;av 478uyTR`~=( ADJ OD *^t"
   val modulus = 128
 
@@ -116,16 +121,99 @@ class Cipher {
 
 }
 
-
+/**
+  * Companion object for Cipher class
+  */
 object Cipher {
 
-  def main(args: Array[String]): Unit = {
-    //println("Hi, I'm working")
+  private def demo(): Unit = {
     val cipher = new Cipher
     println("Plain text: Master of Puppets")
     val cipherText = cipher.encodeString("Master of Puppets", "sayaka")
     println("Cipher text: " + cipherText)
     val decryptText = cipher.decodeString(cipherText, "sayaka")
     println("Decrypted text: " + decryptText)
+  }
+
+  /**
+    * Accept a string and print out its encryption/decryption
+    *
+    * @param args program arguments
+    * @param cipher Cipher object
+    */
+  private def processString(args: Array[String], cipher: Cipher): Unit = {
+    var ret = ""
+
+    if(args(2).toLowerCase == "e") {
+      if(args.length == 4) {
+        ret = cipher.encodeString(args(0), args(3))
+      }
+      else {
+        ret = cipher.encodeString(args(0), args(3), args(4))
+      }
+    }
+    else if(args(2).toLowerCase == "d") {
+      if(args.length == 4) {
+        ret = cipher.decodeString(args(0), args(3))
+      }
+      else {
+        ret = cipher.decodeString(args(0), args(3), args(4))
+      }
+    }
+    else {
+      println("Invalid Encryption flag")
+      println("Use E for encryption or D for decryption")
+      System.exit(-1)
+    }
+
+    println(ret)
+  }
+
+  /**
+    * Accept a pathname and create an encrypted/decrypted file
+    *
+    * @param args program arguments
+    * @param cipher Cipher object
+    */
+  private def processFile(args: Array[String], cipher: Cipher): Unit = {
+
+  }
+
+  /**
+    * Main method
+    *
+    * use: Cipher [string or pathname] [sting or file flag] [key1] [optional key2]
+    *
+    * @param args arguments
+    */
+  def main(args: Array[String]): Unit = {
+    if(args.length == 1) {
+      val arg = args(0).toLowerCase
+      if(arg == "help" || arg == "h") {
+        println("insert help info here") //update to include help info
+        System.exit(0)
+      }
+      if(arg == "demo" || arg == "d") {
+        demo()
+        System.exit(0)
+      }
+    }
+
+    if(!(args.length == 4 || args.length == 5)) {
+      println("Invalid Arguments\nFor help enter \"help\"")
+      System.exit(-1)
+    }
+
+    val cipher = new Cipher
+    if(args(1).toLowerCase == "s") {
+      processString(args, cipher)
+    }
+    else if(args(1).toLowerCase == "f") {
+      processFile(args, cipher)
+    }
+    else {
+      println("Invalid Arguments\nFor help enter \"help\"")
+      System.exit(-1)
+    }
   }
 }
