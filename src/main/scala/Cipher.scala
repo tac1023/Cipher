@@ -1,3 +1,5 @@
+import java.io.File
+
 import scala.annotation.tailrec
 
 /**
@@ -42,6 +44,19 @@ class Cipher {
   }
 
   /**
+    * Encrypt the contents of a given file by first applying a Vignere cipher twice
+    * with two keys then shuffling the results. The encrypted contents are stored
+    * into a new file.
+    *
+    * @param file The file to encrypt
+    * @param key1 Required input key for first encryption
+    * @param key2 Option input key (default key used if none) for second encryption
+    */
+  def encodeFile(file: File, key1: String, key2:String = defaultKey2): Unit = {
+    println(file.getPath)
+  }
+
+  /**
     * Tail recursive function that applies a Vigenere cipher to an input string
     *
     * @param strList Input string as a list of chars
@@ -65,7 +80,7 @@ class Cipher {
     *
     * @param str The string to decrypt
     * @param key1 Required input key for first encryption (second decryption)
-    * @param key2 Option second input key (default used if none) for second encryption (first decryption)
+    * @param key2 Optional second input key (default used if none) for second encryption (first decryption)
     * @return plain text
     */
   def decodeString(str: String, key1: String, key2: String = defaultKey2): String = {
@@ -97,6 +112,18 @@ class Cipher {
     val fin = decrypt(mid.toList, key1, key1Size, 0, "")
 
     fin.reverse
+  }
+
+  /**
+    * Decrypt a file by first un-shuffling the contents then twice un-applying
+    * a Vingenere cipher with two keys. The results are stored into a new file
+    *
+    * @param file File to decrypt
+    * @param key1 Required input key for firs encryption (second decryption)
+    * @param key2 Optional input key (default used if none) for second encryption (first decryption)
+    */
+  def decodeFile(file: File, key1: String, key2: String = defaultKey2): Unit = {
+
   }
 
   /**
@@ -176,7 +203,33 @@ object Cipher {
     * @param cipher Cipher object
     */
   private def processFile(args: Array[String], cipher: Cipher): Unit = {
+    val file = new File(args(0))
+    if(!file.exists()) {
+      println("Could not open file")
+      System.exit(-1)
+    }
 
+    if(args(2).toLowerCase == "e") {
+      if(args.length == 4) {
+        cipher.encodeFile(file, args(3))
+      }
+      else {
+        cipher.encodeFile(file, args(3), args(4))
+      }
+    }
+    else if (args(2) == "d") {
+      if(args.length == 4) {
+        cipher.decodeFile(file, args(3))
+      }
+      else {
+        cipher.decodeFile(file, args(3), args(4))
+      }
+    }
+    else {
+      println("Invalid Encryption flag")
+      println("Use E for encryption or D for decryption")
+      System.exit(-1)
+    }
   }
 
   /**
