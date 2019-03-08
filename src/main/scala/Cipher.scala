@@ -235,7 +235,7 @@ object Cipher {
   /**
     * Main method
     *
-    * use: Cipher [string or pathname] [sting or file flag] [key1] [optional key2]
+    * use: Cipher [string or pathname] [sting or file flag] [encrypt or decrypt flag] [key1] [optional key2]
     *
     * @param args arguments
     */
@@ -252,8 +252,13 @@ object Cipher {
       }
     }
 
+    //Debug
+    /*for( arg <- args) {
+      println(arg)
+    }*/
+
     if(!(args.length == 4 || args.length == 5)) {
-      println("Invalid Arguments\nFor help enter \"help\"")
+      println("Invalid Arguments\nToo few or too many\nFor help enter \"help\"")
       System.exit(-1)
     }
 
