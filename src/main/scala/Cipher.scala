@@ -11,7 +11,10 @@ import scala.annotation.tailrec
   * thread safe.
   */
 class Cipher {
+  //Default second key to use if user doesn't give a second key
   val defaultKey2 = "]09agvn cv8eA ino;av 478uyTR`~=( ADJ OD *^t"
+
+  //size of alphabet. 128 because ASCII
   val modulus = 128
 
   /**
@@ -27,20 +30,7 @@ class Cipher {
     val key1Size = key1.length
     val key2Size = key2.length
 
-    val mid = encrypt(str.toList, key1, key1Size, 0, "")
-    val fin = encrypt(mid.toList, key2, key2Size, 0, "")
-
-    var half1 = ""
-    var half2 = ""
-    var counter = 0
-
-    for(letter <- fin) {
-      if(counter == 0) half1 = letter + half1
-      else half2 = letter + half2
-      counter = (counter + 1) % 2
-    }
-
-    half1 + half2
+    encryptString(str.toList, key1, key2, key1Size, key2Size, 0, 0, "", "", 0)
   }
 
   /**
@@ -59,6 +49,8 @@ class Cipher {
   /**
     * Tail recursive function that applies a Vigenere cipher to an input string
     *
+    * Deprecated
+    *
     * @param strList Input string as a list of chars
     * @param key The key to use for the encryption
     * @param keyLength The length of the key
@@ -72,6 +64,37 @@ class Cipher {
     case _ =>
       val x = (strList.head + key.charAt(i)) % modulus
       encrypt(strList.tail, key, keyLength, (i + 1) % keyLength, x.asInstanceOf[Char] + ret)
+  }
+
+  /**
+    * Tail recursive function that applies a Vigenere cipher to an input string
+    *
+    * @param strList Input string as a list of chars
+    * @param key1 The first key to use for the encryption
+    * @param key2 The second key to use for the encryption
+    * @param keyLength1 The length of key1
+    * @param keyLength2 The length of key2
+    * @param i The index of key1
+    * @param j The index of key2
+    * @param ret1 The first half of the string to return
+    * @param ret2 The second half of the string to return
+    * @param toggle Select whether to write to ret1 or ret2
+    * @return An encrypted string
+    */
+  @tailrec
+  private def encryptString(strList: List[Char], key1: String, key2: String, keyLength1: Int, keyLength2: Int,
+                            i: Int, j: Int, ret1: String, ret2: String, toggle: Int): String = (strList, toggle) match {
+    case (Nil, _) => ret1 + ret2
+    case (_, 0) =>
+      val x = (strList.head + key1.charAt(i)) % modulus
+      val y = (x + key2.charAt(j)) % modulus
+      encryptString(strList.tail, key1, key2, keyLength1, keyLength2, (i + 1) % keyLength1, (j + 1) % keyLength2,
+        y.asInstanceOf[Char] + ret1, ret2, 1)
+    case (_, 1) =>
+      val x = (strList.head + key1.charAt(i)) % modulus
+      val y = (x + key2.charAt(j)) % modulus
+      encryptString(strList.tail, key1, key2, keyLength1, keyLength2, (i + 1) % keyLength1, (j + 1) % keyLength2,
+        ret1, y.asInstanceOf[Char] + ret2, 0)
   }
 
   /**
@@ -108,10 +131,7 @@ class Cipher {
       count += 1
     }
 
-    val mid = decrypt(res.toList.reverse, key2, key2Size, 0, "")
-    val fin = decrypt(mid.toList, key1, key1Size, 0, "")
-
-    fin.reverse
+    decryptString(res.toList, key1, key2, key1Size, key2Size, 0, 0, "").reverse
   }
 
   /**
@@ -129,6 +149,8 @@ class Cipher {
   /**
     * Tail recursive function that un-applies a Vigenere cipher to an input string
     *
+    * Deprecated
+    *
     * @param strList Input string as a list of chars
     * @param key key used for encryption
     * @param keyLength length of key
@@ -145,6 +167,32 @@ class Cipher {
       decrypt(strList.tail, key, keyLength, (i + 1) % keyLength, x.asInstanceOf[Char] + ret)
   }
 
+  /**
+    * Tail recursive function that un-applies a Vigenere cipher to an input string
+    *
+    * @param strList Input string as a list of chars
+    * @param key1 first key used for encryption
+    * @param key2 second key used for encryption
+    * @param keyLength1 length of key1
+    * @param keyLength2 length of key2
+    * @param i index of key1
+    * @param j index of key2
+    * @param ret string to return
+    * @return a decrypted string
+    */
+  @tailrec
+  private def decryptString(strList: List[Char], key1: String, key2: String, keyLength1: Int, keyLength2: Int,
+                            i: Int, j: Int, ret: String): String = strList match {
+    case Nil => ret
+    case _ =>
+      var x = strList.head - key2.charAt(j)
+      if(x < 0) x = modulus + x
+      var y = x - key1.charAt(i)
+      if(y < 0) y = modulus + y
+      decryptString(strList.tail, key1, key2, keyLength1, keyLength2, (i + 1) % keyLength1, (j + 1) % keyLength2,
+        y.asInstanceOf[Char] + ret)
+  }
+
 
 }
 
@@ -156,7 +204,7 @@ object Cipher {
   private def demo(): Unit = {
     val cipher = new Cipher
     println("Plain text: Master of Puppets")
-    val cipherText = cipher.encodeString("Master of Puppets", "sayaka")
+    val cipherText = cipher.encodeString("Master of Puppets, The New Order, Rust In Peace", "sayaka")
     println("Cipher text: " + cipherText)
     val decryptText = cipher.decodeString(cipherText, "sayaka")
     println("Decrypted text: " + decryptText)
