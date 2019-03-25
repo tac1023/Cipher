@@ -1,4 +1,4 @@
-import java.io.File
+import java.io._
 
 import scala.annotation.tailrec
 
@@ -42,8 +42,24 @@ class Cipher {
     * @param key1 Required input key for first encryption
     * @param key2 Option input key (default key used if none) for second encryption
     */
-  def encodeFile(file: File, key1: String, key2:String = defaultKey2): Unit = {
-    println(file.getPath)
+  private def encodeFile(reader: FileReader, writer: FileWriter, key1: String, key2:String = defaultKey2): Unit = {
+    val key1Size = key1.length
+    val key2Size = key2.length
+    try {
+      encryptFile(reader, writer, key1, key2, key1Size, key2Size, 0, 0)
+    }
+    catch {
+      case _: IOException => println("IOException caused encryption to abort")
+    }
+  }
+
+  @tailrec
+  private def encryptFile(reader: FileReader, writer: FileWriter, key1: String, key2: String,
+                  keyLength1: Int, keyLength2: Int, i: Int, j: Int): Unit = reader.read() match {
+    case -1 =>
+    case c =>
+      writer.write(encryptChar(c.asInstanceOf[Char], key1.charAt(i), key2.charAt(j)))
+      encryptFile(reader, writer, key1, key2, keyLength1, keyLength2, (i + 1) % keyLength1, (j + 1) % keyLength2)
   }
 
   /**
@@ -86,15 +102,19 @@ class Cipher {
                             i: Int, j: Int, ret1: String, ret2: String, toggle: Int): String = (strList, toggle) match {
     case (Nil, _) => ret1 + ret2
     case (_, 0) =>
-      val x = (strList.head + key1.charAt(i)) % modulus
-      val y = (x + key2.charAt(j)) % modulus
+      val c = encryptChar(strList.head, key1.charAt(i), key2.charAt(j))
       encryptString(strList.tail, key1, key2, keyLength1, keyLength2, (i + 1) % keyLength1, (j + 1) % keyLength2,
-        y.asInstanceOf[Char] + ret1, ret2, 1)
+        c + ret1, ret2, 1)
     case (_, 1) =>
-      val x = (strList.head + key1.charAt(i)) % modulus
-      val y = (x + key2.charAt(j)) % modulus
+      val c = encryptChar(strList.head, key1.charAt(i), key2.charAt(j))
       encryptString(strList.tail, key1, key2, keyLength1, keyLength2, (i + 1) % keyLength1, (j + 1) % keyLength2,
-        ret1, y.asInstanceOf[Char] + ret2, 0)
+        ret1, c + ret2, 0)
+  }
+
+  private def encryptChar(c: Char, keyChar1: Char, keyChar2: Char): Char = {
+    val x = (c + keyChar1) % modulus
+    val y = (x + keyChar2) % modulus
+    y.asInstanceOf[Char]
   }
 
   /**
@@ -135,15 +155,43 @@ class Cipher {
   }
 
   /**
-    * Decrypt a file by first un-shuffling the contents then twice un-applying
+    * Decrypt a file by twice un-applying
     * a Vingenere cipher with two keys. The results are stored into a new file
     *
     * @param file File to decrypt
     * @param key1 Required input key for firs encryption (second decryption)
     * @param key2 Optional input key (default used if none) for second encryption (first decryption)
     */
-  def decodeFile(file: File, key1: String, key2: String = defaultKey2): Unit = {
+  private def decodeFile(fileReader: FileReader, fileWriter: FileWriter, key1: String, key2: String = defaultKey2): Unit = {
+    val key1Size = key1.length
+    val key2Size = key2.length
+    try {
+      decryptFile(fileReader, fileWriter, key1, key2, key1Size, key2Size, 0, 0)
+    }
+    catch {
+      case _: IOException => println("IOException caused decryption to abort")
+    }
+  }
 
+  /**
+    * Decrypt a file
+    *
+    * @param reader FileReader of input file
+    * @param writer FileWriter of output file
+    * @param key1 First key used to encrypt
+    * @param key2 Second key used to encrypt
+    * @param keyLength1 Length of key1
+    * @param keyLength2 Length of key2
+    * @param i Index of key1
+    * @param j Index of key2
+    */
+  @tailrec
+  private def decryptFile(reader: FileReader, writer: FileWriter, key1: String, key2: String, keyLength1: Int,
+                  keyLength2: Int, i: Int, j: Int): Unit = reader.read() match {
+    case -1 =>
+    case c =>
+      writer.write(decryptChar(c.asInstanceOf[Char], key1.charAt(i), key2.charAt(j)))
+      decryptFile(reader, writer, key1, key2, keyLength1, keyLength2, (i + 1) % keyLength1, (j + 1) % keyLength2)
   }
 
   /**
@@ -185,12 +233,26 @@ class Cipher {
                             i: Int, j: Int, ret: String): String = strList match {
     case Nil => ret
     case _ =>
-      var x = strList.head - key2.charAt(j)
-      if(x < 0) x = modulus + x
-      var y = x - key1.charAt(i)
-      if(y < 0) y = modulus + y
+      val c = decryptChar(strList.head, key1.charAt(i), key2.charAt(j))
       decryptString(strList.tail, key1, key2, keyLength1, keyLength2, (i + 1) % keyLength1, (j + 1) % keyLength2,
-        y.asInstanceOf[Char] + ret)
+        c + ret)
+  }
+
+  /**
+    * Takes a character along with the corresponding characters of two keys and
+    * decrypts the character
+    *
+    * @param c Character to be decrypted
+    * @param keyChar1 Character from key1
+    * @param keyChar2 Character from key2
+    * @return Decrypted Character
+    */
+  private def decryptChar(c: Char, keyChar1: Char, keyChar2: Char): Char = {
+    var x = c - keyChar2
+    if(x < 0) x = modulus + x
+    var y = x - keyChar1
+    if(y < 0) y = modulus + y
+    y.asInstanceOf[Char]
   }
 
 
@@ -201,13 +263,35 @@ class Cipher {
   */
 object Cipher {
 
+  /**
+    * Quick demo String encryption/decryption for testing purposes
+    */
   private def demo(): Unit = {
     val cipher = new Cipher
-    println("Plain text: Master of Puppets")
+    println("Plain text: Master of Puppets, The New Order, Rust In Peace")
     val cipherText = cipher.encodeString("Master of Puppets, The New Order, Rust In Peace", "sayaka")
     println("Cipher text: " + cipherText)
     val decryptText = cipher.decodeString(cipherText, "sayaka")
     println("Decrypted text: " + decryptText)
+  }
+
+  /**
+    * Quick demo File encryption/decryption for testing purposes
+    *
+    * note* This is hardcoded to work on my development machine
+    */
+  private def demoFile(): Unit = {
+    val cipher = new Cipher
+    println("Input: example.txt")
+    val urlEncrypt = "D:\\Users\\Tyler\\Documents\\School\\sideProjects\\Cipher\\example.txt"
+    val urlDecrypt = "D:\\Users\\Tyler\\Documents\\School\\sideProjects\\Cipher\\example_encrypted.txt"
+    val key = "sayaka"
+    val argsEncrypt: Array[String] = Array(urlEncrypt, "f", "e", key)
+    val argsDecrypt: Array[String] = Array(urlDecrypt, "f", "d", key)
+    processFile(argsEncrypt, cipher)
+    println("Encrypted File")
+    processFile(argsDecrypt, cipher)
+    println("Decrypted File")
   }
 
   /**
@@ -257,20 +341,41 @@ object Cipher {
       System.exit(-1)
     }
 
+    val filename = file.getName
+    val directory = file.getAbsolutePath.replace(filename, "")
+    val splice = filename.lastIndexOf(".")
+    val name = filename.substring(0, splice)
+    val extension = filename.substring(splice)
+    var outputFilename: String = ""
+    if(args(2).toLowerCase == "e") outputFilename = directory + name + "_encrypted" + extension
+    if(args(2).toLowerCase == "d") outputFilename = directory + name + "_decrypted" + extension
+
+    var fileReader: FileReader = null
+    var fileWriter: FileWriter = null
+    try {
+      fileReader = new FileReader(file)
+      fileWriter = new FileWriter(outputFilename)
+    }
+    catch {
+      case _: FileNotFoundException => println("Could not open input file")
+        System.exit(-1)
+      case _: IOException => println("Could not open output file")
+    }
+
     if(args(2).toLowerCase == "e") {
       if(args.length == 4) {
-        cipher.encodeFile(file, args(3))
+        cipher.encodeFile(fileReader, fileWriter, args(3))
       }
       else {
-        cipher.encodeFile(file, args(3), args(4))
+        cipher.encodeFile(fileReader, fileWriter, args(3), args(4))
       }
     }
-    else if (args(2) == "d") {
+    else if (args(2).toLowerCase == "d") {
       if(args.length == 4) {
-        cipher.decodeFile(file, args(3))
+        cipher.decodeFile(fileReader, fileWriter, args(3))
       }
       else {
-        cipher.decodeFile(file, args(3), args(4))
+        cipher.decodeFile(fileReader, fileWriter, args(3), args(4))
       }
     }
     else {
@@ -278,6 +383,9 @@ object Cipher {
       println("Use E for encryption or D for decryption")
       System.exit(-1)
     }
+
+    fileReader.close()
+    fileWriter.close()
   }
 
   /**
@@ -290,20 +398,20 @@ object Cipher {
   def main(args: Array[String]): Unit = {
     if(args.length == 1) {
       val arg = args(0).toLowerCase
+      println(arg)
       if(arg == "help" || arg == "h") {
         println("insert help info here") //update to include help info
         System.exit(0)
       }
-      if(arg == "demo" || arg == "d") {
+      else if(arg == "demo" || arg == "d") {
         demo()
         System.exit(0)
       }
+      else if(arg == "demofile" || arg == "df") {
+        demoFile()
+        System.exit(0)
+      }
     }
-
-    //Debug
-    /*for( arg <- args) {
-      println(arg)
-    }*/
 
     if(!(args.length == 4 || args.length == 5)) {
       println("Invalid Arguments\nToo few or too many\nFor help enter \"help\"")
