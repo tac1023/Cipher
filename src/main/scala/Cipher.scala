@@ -34,35 +34,6 @@ class Cipher {
   }
 
   /**
-    * Encrypt the contents of a given file by first applying a Vignere cipher twice
-    * with two keys then shuffling the results. The encrypted contents are stored
-    * into a new file.
-    *
-    * @param file The file to encrypt
-    * @param key1 Required input key for first encryption
-    * @param key2 Option input key (default key used if none) for second encryption
-    */
-  private def encodeFile(reader: FileReader, writer: FileWriter, key1: String, key2:String = defaultKey2): Unit = {
-    val key1Size = key1.length
-    val key2Size = key2.length
-    try {
-      encryptFile(reader, writer, key1, key2, key1Size, key2Size, 0, 0)
-    }
-    catch {
-      case _: IOException => println("IOException caused encryption to abort")
-    }
-  }
-
-  @tailrec
-  private def encryptFile(reader: FileReader, writer: FileWriter, key1: String, key2: String,
-                  keyLength1: Int, keyLength2: Int, i: Int, j: Int): Unit = reader.read() match {
-    case -1 =>
-    case c =>
-      writer.write(encryptChar(c.asInstanceOf[Char], key1.charAt(i), key2.charAt(j)))
-      encryptFile(reader, writer, key1, key2, keyLength1, keyLength2, (i + 1) % keyLength1, (j + 1) % keyLength2)
-  }
-
-  /**
     * Tail recursive function that applies a Vigenere cipher to an input string
     *
     * Deprecated
@@ -111,6 +82,57 @@ class Cipher {
         ret1, c + ret2, 0)
   }
 
+  /**
+    * Encrypt the contents of a given file by first applying a Vignere cipher twice
+    * with two keys then shuffling the results. The encrypted contents are stored
+    * into a new file.
+    *
+    * @param reader The FileReader to encrypt
+    * @param writer The FileWriter to which to write the result
+    * @param key1 Required input key for first encryption
+    * @param key2 Option input key (default key used if none) for second encryption
+    */
+  private def encodeFile(reader: FileReader, writer: FileWriter, key1: String, key2:String = defaultKey2): Unit = {
+    val key1Size = key1.length
+    val key2Size = key2.length
+    try {
+      encryptFile(reader, writer, key1, key2, key1Size, key2Size, 0, 0)
+    }
+    catch {
+      case _: IOException => println("IOException caused encryption to abort")
+    }
+  }
+
+  /**
+    * Tail recursive function that applies a Vigenere cipher to an input file
+    *
+    * @param reader FileReader to encrypt
+    * @param writer FileWriter to which to write result
+    * @param key1 First key to use to encrypt
+    * @param key2 Second key to use to encrypt
+    * @param keyLength1 Length of key1
+    * @param keyLength2 Length of key2
+    * @param i Index of key1
+    * @param j Index of key2
+    */
+  @tailrec
+  private def encryptFile(reader: FileReader, writer: FileWriter, key1: String, key2: String,
+                          keyLength1: Int, keyLength2: Int, i: Int, j: Int): Unit = reader.read() match {
+    case -1 =>
+    case c =>
+      writer.write(encryptChar(c.asInstanceOf[Char], key1.charAt(i), key2.charAt(j)))
+      encryptFile(reader, writer, key1, key2, keyLength1, keyLength2, (i + 1) % keyLength1, (j + 1) % keyLength2)
+  }
+
+  /**
+    * Takes a character along with the corresponding characters of two keys and
+    * encrypts the character
+    *
+    * @param c Character to be encrypted
+    * @param keyChar1 Character from key1
+    * @param keyChar2 Character from key2
+    * @return Encrypted Character
+    */
   private def encryptChar(c: Char, keyChar1: Char, keyChar2: Char): Char = {
     val x = (c + keyChar1) % modulus
     val y = (x + keyChar2) % modulus
@@ -152,46 +174,6 @@ class Cipher {
     }
 
     decryptString(res.toList, key1, key2, key1Size, key2Size, 0, 0, "").reverse
-  }
-
-  /**
-    * Decrypt a file by twice un-applying
-    * a Vingenere cipher with two keys. The results are stored into a new file
-    *
-    * @param file File to decrypt
-    * @param key1 Required input key for firs encryption (second decryption)
-    * @param key2 Optional input key (default used if none) for second encryption (first decryption)
-    */
-  private def decodeFile(fileReader: FileReader, fileWriter: FileWriter, key1: String, key2: String = defaultKey2): Unit = {
-    val key1Size = key1.length
-    val key2Size = key2.length
-    try {
-      decryptFile(fileReader, fileWriter, key1, key2, key1Size, key2Size, 0, 0)
-    }
-    catch {
-      case _: IOException => println("IOException caused decryption to abort")
-    }
-  }
-
-  /**
-    * Decrypt a file
-    *
-    * @param reader FileReader of input file
-    * @param writer FileWriter of output file
-    * @param key1 First key used to encrypt
-    * @param key2 Second key used to encrypt
-    * @param keyLength1 Length of key1
-    * @param keyLength2 Length of key2
-    * @param i Index of key1
-    * @param j Index of key2
-    */
-  @tailrec
-  private def decryptFile(reader: FileReader, writer: FileWriter, key1: String, key2: String, keyLength1: Int,
-                  keyLength2: Int, i: Int, j: Int): Unit = reader.read() match {
-    case -1 =>
-    case c =>
-      writer.write(decryptChar(c.asInstanceOf[Char], key1.charAt(i), key2.charAt(j)))
-      decryptFile(reader, writer, key1, key2, keyLength1, keyLength2, (i + 1) % keyLength1, (j + 1) % keyLength2)
   }
 
   /**
@@ -239,6 +221,47 @@ class Cipher {
   }
 
   /**
+    * Decrypt a file by twice un-applying
+    * a Vingenere cipher with two keys. The results are stored into a new file
+    *
+    * @param fileReader FileReader to decrypt
+    * @param fileWriter FileWriter to which to write the result
+    * @param key1 Required input key for firs encryption (second decryption)
+    * @param key2 Optional input key (default used if none) for second encryption (first decryption)
+    */
+  private def decodeFile(fileReader: FileReader, fileWriter: FileWriter, key1: String, key2: String = defaultKey2): Unit = {
+    val key1Size = key1.length
+    val key2Size = key2.length
+    try {
+      decryptFile(fileReader, fileWriter, key1, key2, key1Size, key2Size, 0, 0)
+    }
+    catch {
+      case _: IOException => println("IOException caused decryption to abort")
+    }
+  }
+
+  /**
+    * Decrypt a file
+    *
+    * @param reader FileReader of input file
+    * @param writer FileWriter of output file
+    * @param key1 First key used to encrypt
+    * @param key2 Second key used to encrypt
+    * @param keyLength1 Length of key1
+    * @param keyLength2 Length of key2
+    * @param i Index of key1
+    * @param j Index of key2
+    */
+  @tailrec
+  private def decryptFile(reader: FileReader, writer: FileWriter, key1: String, key2: String, keyLength1: Int,
+                          keyLength2: Int, i: Int, j: Int): Unit = reader.read() match {
+    case -1 =>
+    case c =>
+      writer.write(decryptChar(c.asInstanceOf[Char], key1.charAt(i), key2.charAt(j)))
+      decryptFile(reader, writer, key1, key2, keyLength1, keyLength2, (i + 1) % keyLength1, (j + 1) % keyLength2)
+  }
+
+  /**
     * Takes a character along with the corresponding characters of two keys and
     * decrypts the character
     *
@@ -254,8 +277,6 @@ class Cipher {
     if(y < 0) y = modulus + y
     y.asInstanceOf[Char]
   }
-
-
 }
 
 /**
@@ -398,7 +419,6 @@ object Cipher {
   def main(args: Array[String]): Unit = {
     if(args.length == 1) {
       val arg = args(0).toLowerCase
-      println(arg)
       if(arg == "help" || arg == "h") {
         println("insert help info here") //update to include help info
         System.exit(0)
